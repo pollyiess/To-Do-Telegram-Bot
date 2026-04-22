@@ -50,4 +50,14 @@ class Database
   def add_task(telegram_id, text)
     @db[:tasks].insert(user_id: telegram_id, title: text)
   end
+
+  # Получить список всех задач пользователя
+  def all_tasks(telegram_id)
+    @db[:tasks].where(user_id: telegram_id).order(Sequel.desc(:created_at)).all
+  end
+
+  # Удалить все задачи пользователя
+  def clear_tasks(telegram_id)
+    @db[:tasks].where(user_id: telegram_id).delete
+  end
 end
