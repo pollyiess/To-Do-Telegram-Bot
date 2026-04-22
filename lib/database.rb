@@ -14,9 +14,9 @@ class Database
 
   # Метод для смены состояния
   def set_state(telegram_id, state)
-    user = @db[:users].first(telegram_id: telegram_id)
-    if user
-      @db[:users].where(telegram_id: telegram_id).update(state: state)
+    user = @db[:users].where(telegram_id: telegram_id)
+    if user.any?
+      user.update(state: state)
     else
       @db[:users].insert(telegram_id: telegram_id, state: state)
     end
@@ -49,6 +49,24 @@ class Database
   # Удалить все задачи пользователя
   def clear_tasks(telegram_id)
     @db[:tasks].where(user_id: telegram_id).delete
+  end
+
+  # Находит последнюю добавленную задачу пользователя, которая ждет выбора приоритета
+  def find_pending_task(user_id)
+    @db[:tasks]
+      .where(user_id: user_id, priority: 'PENDING')
+      .order(Sequel.desc(:id))
+      .first
+  end
+
+  # Обновляет приоритет у конкретной задачи
+  def update_task_priority(task_id, priority)
+    @db[:tasks].where(id: task_id).update(priority: priority)
+  end
+
+  # Удаляет зависшие задачи (если пользователь нажал «Назад» вместо выбора приоритета)
+  def delete_pending_tasks(user_id)
+    @db[:tasks].where(user_id: user_id, priority: 'PENDING').delete
   end
 
   private
