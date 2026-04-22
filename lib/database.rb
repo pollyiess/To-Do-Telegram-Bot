@@ -45,4 +45,9 @@ class Database
     user = @db[:users].first(telegram_id: telegram_id)
     user ? user[:state] : 'START'
   end
+
+  # Метод для добавления новой задачи
+  def add_task(telegram_id, text)
+    @db[:tasks].insert(user_id: telegram_id, title: text)
+  end
 end
