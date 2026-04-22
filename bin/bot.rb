@@ -9,22 +9,21 @@ require_relative '../lib/states/adding_task_state'
 token = ENV['TELEGRAM_BOT_TOKEN']
 db = Database.new
 
-puts 'Бот запущен...'
-
 Telegram::Bot::Client.run(token) do |bot|
+  puts 'Бот запущен...'
+
   bot.listen do |message|
+    # Защита: обрабатываем только текстовые сообщения от пользователей
+    next unless message.is_a?(Telegram::Bot::Types::Message)
     next unless message.text
 
-    # Достаем состояние юзера из SQLite
-    current_state_name = db.get_state(message.from.id)
+    state_name = db.get_state(message.from.id)
 
-    # Выбираем обработчик
-    handler = if current_state_name == 'ADDING_TASK'
-                AddingTaskState.new(bot, db)
-              else
-                MenuState.new(bot, db)
-              end
-
-    handler.handle(message)
+    case state_name
+    when 'ADDING_TASK'
+      AddingTaskState.new(bot, db).handle(message)
+    else
+      MenuState.new(bot, db).handle(message)
+    end
   end
 end
