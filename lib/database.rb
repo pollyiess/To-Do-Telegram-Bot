@@ -2,11 +2,14 @@
 
 require 'sequel'
 require 'sqlite3'
+require 'fileutils'
 
 class Database
   attr_reader :db
 
   def initialize
+    FileUtils.mkdir_p('db') unless File.directory?('db')
+
     @db = Sequel.sqlite('db/todo_bot.sqlite3')
     setup_tasks_table
     setup_users_table
