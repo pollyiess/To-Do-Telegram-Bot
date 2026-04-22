@@ -6,10 +6,16 @@ require_relative 'base_state'
 class MenuState < BaseState
   def handle(message)
     case message.text
-    when '/start', '🏠 Меню' then show_menu(message.chat.id)
-    when '/add', '➕ Добавить задачу' then start_adding_task(message)
-    when '/tasks', '📋 Мои задачи' then show_tasks(message)
-    when '/help', '❓ Помощь' then show_help(message.chat.id)
+    when '/start', '🏠 Меню'
+      show_menu(message.chat.id)
+    when '/add', '➕ Добавить задачу'
+      start_adding_task(message)
+    when '/tasks', '📋 Мои задачи'
+      show_tasks(message)
+    when '/clear', '🗑️ Очистить всё'
+      clear_all_tasks(message)
+    when '/help', '❓ Помощь'
+      show_help(message.chat.id)
     else
       handle_unknown(message)
     end
@@ -18,7 +24,10 @@ class MenuState < BaseState
   def show_menu(chat_id)
     kb = [
       [Telegram::Bot::Types::KeyboardButton.new(text: '➕ Добавить задачу')],
-      [Telegram::Bot::Types::KeyboardButton.new(text: '📋 Мои задачи')],
+      [
+        Telegram::Bot::Types::KeyboardButton.new(text: '📋 Мои задачи'),
+        Telegram::Bot::Types::KeyboardButton.new(text: '🗑️ Очистить всё')
+      ],
       [Telegram::Bot::Types::KeyboardButton.new(text: '❓ Помощь')]
     ]
     markup = Telegram::Bot::Types::ReplyKeyboardMarkup.new(keyboard: kb, resize_keyboard: true)
@@ -29,11 +38,16 @@ class MenuState < BaseState
 
   def start_adding_task(message)
     db.set_state(message.from.id, 'ADDING_TASK')
-    bot.api.send_message(chat_id: message.chat.id, text: 'Напиши, что нужно сделать:')
+
+    kb = [[Telegram::Bot::Types::KeyboardButton.new(text: '⬅️ Назад')]]
+    markup = Telegram::Bot::Types::ReplyKeyboardMarkup.new(keyboard: kb, resize_keyboard: true)
+
+    bot.api.send_message(chat_id: message.chat.id, text: 'Напиши, что нужно сделать:', reply_markup: markup)
   end
 
   def handle_unknown(message)
     bot.api.send_message(chat_id: message.chat.id, text: 'Выбери действие на клавиатуре 👇')
+    show_menu(message.chat.id)
   end
 
   def show_tasks(message)
@@ -48,13 +62,28 @@ class MenuState < BaseState
   end
 
   def format_tasks(tasks)
-    text = "📋 *Твои задачи:*\n\n"
+    text = "📋 *Твой список задач (по приоритетам):*\n\n"
 
     tasks.each_with_index do |task, i|
-      text += "#{i + 1}. #{task[:title]}\n"
+      text += "#{i + 1}. #{task[:priority]} — #{task[:title]}\n"
     end
 
     text
+  end
+
+  # Логика полной очистки
+  def clear_all_tasks(message)
+    db.clear_tasks(message.from.id)
+
+    remove_markup = Telegram::Bot::Types::ReplyKeyboardRemove.new(remove_keyboard: true)
+
+    bot.api.send_message(
+      chat_id: message.chat.id,
+      text: '🗑️ Список задач полностью очищен!',
+      reply_markup: remove_markup
+    )
+
+    show_menu(message.chat.id)
   end
 
   def send_empty_msg(chat_id)
@@ -63,7 +92,11 @@ class MenuState < BaseState
   end
 
   def show_help(chat_id)
-    help_text = "🤖 *Помощь:*\n1. /add - добавить задачу\n2. /tasks - список дел"
+    help_text = "🤖 *Помощь:*\n\n" \
+                "1. /add — добавить задачу\n" \
+                "2. /tasks — список дел\n" \
+                "3. /clear — очистить список\n" \
+                '4. /start — открыть меню'
     bot.api.send_message(chat_id: chat_id, text: help_text, parse_mode: 'Markdown')
   end
 end

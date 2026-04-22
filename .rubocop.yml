@@ -1,0 +1,12 @@
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'db/**/*'
+    - 'vendor/**/*'
+
+Metrics/MethodLength:
+  Max: 20 
+
+Style/Documentation:
+  Enabled: false 
